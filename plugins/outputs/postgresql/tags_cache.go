@@ -68,6 +68,7 @@ func (c *defTagsCache) getTagID(target *utils.TargetColumns, metric telegraf.Met
 	var whereValues []interface{}
 	if c.tagsAsJSONb {
 		whereParts = []string{utils.QuoteIdent(columns.TagsJSONColumn) + "= $1"}
+		insertNames = []string{columns.TagsJSONColumn}
 		numTags := len(tags)
 		if numTags > 0 {
 			d, err := utils.BuildJsonb(tags)
@@ -81,13 +82,16 @@ func (c *defTagsCache) getTagID(target *utils.TargetColumns, metric telegraf.Met
 	} else {
 		whereParts = make([]string, len(target.Names)-1)
 		whereValues = make([]interface{}, len(target.Names)-1)
+		insertNames = make([]string, len(target.Names)-1)
+		whereIndex := 1
 		for columnIndex, tagName := range target.Names[1:] {
 			if val, ok := tags[tagName]; ok {
-				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " = $" + strconv.Itoa(columnIndex+1)
-				whereValues[columnIndex] = val
+				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " = $" + strconv.Itoa(whereIndex)
+				whereValues[whereIndex-1] = val
+				insertNames[whereIndex-1] = tagName
+				whereIndex++
 			} else {
 				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " IS NULL"
-				whereValues[columnIndex] = nil
 			}
 		}
 	}
@@ -104,7 +108,7 @@ func (c *defTagsCache) getTagID(target *utils.TargetColumns, metric telegraf.Met
 	}
 
 	// tag set is new, insert it, and cache the tagID
-	query = utils.GenerateInsert(tagsTableFullName, target.Names[1:]) + " RETURNING " + columns.TagIDColumnName
+	query = utils.GenerateInsert(tagsTableFullName, insertNames) + " RETURNING " + columns.TagIDColumnName
 	err = c.db.QueryRow(query, whereValues...).Scan(&tagID)
 	if err == nil {
 		c.addToCache(measureName, cacheKey, tagID)
