@@ -65,6 +65,7 @@ func (c *defTagsCache) getTagID(target *utils.TargetColumns, metric telegraf.Met
 	}
 
 	var whereParts []string
+	var insertNames []string
 	var whereValues []interface{}
 	if c.tagsAsJSONb {
 		whereParts = []string{utils.QuoteIdent(columns.TagsJSONColumn) + "= $1"}
