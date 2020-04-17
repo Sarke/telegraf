@@ -82,15 +82,11 @@ func (c *defTagsCache) getTagID(target *utils.TargetColumns, metric telegraf.Met
 		}
 	} else {
 		whereParts = make([]string, len(target.Names)-1)
-		whereValues = make([]interface{}, len(target.Names)-1)
-		insertNames = make([]string, len(target.Names)-1)
-		whereIndex := 1
 		for columnIndex, tagName := range target.Names[1:] {
 			if val, ok := tags[tagName]; ok {
-				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " = $" + strconv.Itoa(whereIndex)
-				whereValues[whereIndex-1] = val
-				insertNames[whereIndex-1] = tagName
-				whereIndex++
+				whereValues = append(whereValues, val)
+				insertNames = append(insertNames, tagName)
+				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " = $" + strconv.Itoa(len(insertNames))
 			} else {
 				whereParts[columnIndex] = utils.QuoteIdent(tagName) + " IS NULL"
 			}
